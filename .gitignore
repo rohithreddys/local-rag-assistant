@@ -1,0 +1,18 @@
+# Data files
+data/
+
+# Vector database
+vectorstore/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Virtual environment
+venv/
+
+# OS files
+.DS_Store
+
+# Env
+.env
