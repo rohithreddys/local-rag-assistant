@@ -1,8 +1,13 @@
 from langchain_community.chat_models import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
 from rag.retriever import get_retriever
+
+
+def format_docs(docs):
+    context = "\n\n".join(doc.page_content for doc in docs)
+    sources = list({doc.metadata.get("source_file", "Unknown") for doc in docs})
+    return context, sources
 
 
 def get_qa_chain():
@@ -28,19 +33,18 @@ def get_qa_chain():
     Answer:
     """)
 
-    # Format retrieved docs into a single string
-    def format_docs(docs):
-        return "\n\n".join(doc.page_content for doc in docs)
+    def rag_pipeline(question):
 
-    # Build LCEL pipeline
-    chain = (
-        {
-            "context": retriever | format_docs,
-            "question": RunnablePassthrough()
-        }
-        | prompt
-        | llm
-        | StrOutputParser()
-    )
+        docs = retriever.invoke(question)
+        context, sources = format_docs(docs)
 
-    return chain
+        formatted_prompt = prompt.format(
+            context=context,
+            question=question
+        )
+
+        response = llm.invoke(formatted_prompt)
+
+        return response.content + "\n\nSources: " + ", ".join(sources)
+
+    return rag_pipeline

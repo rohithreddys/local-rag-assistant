@@ -1,3 +1,4 @@
+import os
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Chroma
@@ -5,21 +6,36 @@ from langchain_community.embeddings import HuggingFaceEmbeddings
 
 
 def ingest_documents():
-    print("Loading PDF...")
 
-    loader = PyPDFLoader("data/hunter-user-manual.pdf")
-    documents = loader.load()
+    data_path = "data"
+    all_documents = []
 
-    print(f"Loaded {len(documents)} pages")
+    print("Loading PDFs...")
+
+    for file in os.listdir(data_path):
+        if file.endswith(".pdf"):
+            file_path = os.path.join(data_path, file)
+            print(f"Loading {file}...")
+
+            loader = PyPDFLoader(file_path)
+            documents = loader.load()
+
+            # Add file name to metadata
+            for doc in documents:
+                doc.metadata["source_file"] = file
+
+            all_documents.extend(documents)
+
+    print(f"Total pages loaded: {len(all_documents)}")
 
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=800,
         chunk_overlap=150
     )
 
-    chunks = splitter.split_documents(documents)
+    chunks = splitter.split_documents(all_documents)
 
-    print(f"Created {len(chunks)} chunks")
+    print(f"Total chunks created: {len(chunks)}")
 
     embeddings = HuggingFaceEmbeddings(
         model_name="sentence-transformers/all-MiniLM-L6-v2"
@@ -33,7 +49,7 @@ def ingest_documents():
 
     vectorstore.persist()
 
-    print("Vectorstore created successfully!")
+    print("Multi-document vectorstore created successfully!")
 
 
 if __name__ == "__main__":
